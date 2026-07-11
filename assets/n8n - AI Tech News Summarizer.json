@@ -1,0 +1,294 @@
+{
+  "name": "n8n - AI Tech News Summarizer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "id": "9643c0d6-5cb8-4625-b49f-b0fe761212ca",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://www.searchapi.io/api/v1/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google_events"
+            },
+            {
+              "name": "q",
+              "value": "AI Tech Events in India"
+            },
+            {
+              "name": "api_key",
+              "value": "YOUR_SEARCHAPI_KEY_HERE"
+            },
+            {
+              "name": "gl",
+              "value": "in"
+            },
+            {
+              "name": "=hl",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        384
+      ],
+      "id": "9bbc4be9-2db1-47f1-91f4-05ea1be1fcfa",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "https://aibusiness.com/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "9c95b6f0-77b9-47a3-a55f-5045346d2301",
+      "name": "AI News"
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        192
+      ],
+      "id": "4cb3e515-a5c0-48da-b22e-b88636fa3947",
+      "name": "Tech News"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        176
+      ],
+      "id": "29b1a62a-40f9-43e5-88f2-7c0252f80c3b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        672,
+        192
+      ],
+      "id": "a2e60ff7-5b4b-49ae-b0fa-aa98a211a5fd",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI newsletter assistant creating a daily intelligence report from multiple categories.  \n\nUse only the provided items. Do not invent content.  \n\nOrganize the provided items by category and Format exactly like this:  \n\nHi there, \n\nHere's your Tech Brief:  \n\nAI NEWS HIGHLIGHTS ====================== \n[5 most important AI developments] \nFor each AI-related item, \noutput: HEADLINE IN ALL CAPS Summary in 1–2 sentences. \nLink: <paste link>  \n\nTECHNOLOGY UPDATES ====================== \n[Latest broader technology-related developments from major tech sources] \nFor each broader technology-related item, \noutput: HEADLINE IN ALL CAPS Summary in 1–2 sentences. \nLink: <paste link>  \n\nUPCOMING AI EVENTS ====================== \n[List events with date, location, description] \nIf no events found: \"No AI events scheduled this week\" \nFor each Event Item HEADLINE IN ALL CAPS Summary in 1–2 sentences. \nLink: <paste link>  \n\nKeep the summaries professional, concise, and easy to read.  \n\nSign off as \"Your AI Intelligence Team\""
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        192
+      ],
+      "id": "74d93015-5e37-4c59-b613-660e37751099",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        416
+      ],
+      "id": "a051edc8-2720-439d-af24-e1a823331428",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Your Google Gemini API Credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "STUDENT_EMAIL@EXAMPLE.COM",
+        "subject": "AI Tech News",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        192
+      ],
+      "id": "aee49234-f1e0-47b3-be12-ec95242ba24e",
+      "name": "Send a message",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Your Gmail Credential"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI News",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tech News",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI News": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tech News": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}

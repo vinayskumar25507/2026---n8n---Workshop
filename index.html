@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Summarizer | Workshop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #faf8f4;
+            --ink: #14121f;
+            --card-bg: rgba(255, 255, 255, 0.97);
+            --card-border: rgba(20, 18, 31, 0.08);
+            --neon-cyan: #00b8c4;
+            --neon-violet: #8a2be8;
+            --neon-pink: #e619c9;
+            --neon-amber: #e69500;
+            --neon-green: #00a878;
+            --neon-coral: #ff5c5c;
+            /* Darkened variants used specifically for text/icons, kept AA-contrast (4.5:1+) on --bg */
+            --cyan-text: #007f87;
+            --amber-text: #9a6300;
+            --coral-text: #e60000;
+            --green-text: #007f5b;
+            --text-main: #201d2b;
+            --text-muted: #6b6579;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            background-image: 
+                radial-gradient(circle at 10% 15%, rgba(0, 184, 196, 0.16), transparent 28%),
+                radial-gradient(circle at 85% 10%, rgba(138, 43, 232, 0.14), transparent 30%),
+                radial-gradient(circle at 90% 60%, rgba(230, 25, 201, 0.10), transparent 30%),
+                radial-gradient(circle at 15% 75%, rgba(230, 149, 0, 0.14), transparent 28%),
+                radial-gradient(circle at 50% 95%, rgba(0, 168, 120, 0.12), transparent 30%);
+            /* background-attachment: fixed (previous value) forces Chromium to
+               repaint this entire gradient layer on every scroll frame. Combined
+               with 6+ backdrop-filter blur cards compositing on top of it, that
+               repaint occasionally lags behind and shows a blank/white frame for
+               an instant -- the intermittent "white box" flicker. Switching to
+               scroll removes that per-frame repaint burden entirely. Visually
+               near-identical since the gradients are large, soft, and spread
+               across the whole page. */
+            background-attachment: scroll;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Cards -- solid background (no backdrop-filter), so there is no GPU blur
+           compositing left for Chromium to glitch on. Depth now comes from a
+           crisp border, a soft drop shadow, and the colored top accent instead
+           of translucency + blur. */
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 24px rgba(32, 29, 43, 0.06);
+        }
+
+        /* Hero Section */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-top: 40px;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-violet) 55%, var(--neon-pink));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 30px auto;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 10px;
+        }
+
+        .btn-primary {
+            background: transparent;
+            color: var(--cyan-text);
+            border: 1px solid var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 184, 196, 0.15);
+        }
+
+        .btn-primary:hover {
+            background: var(--neon-cyan);
+            color: var(--ink);
+            box-shadow: 0 0 20px rgba(0, 184, 196, 0.45);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--neon-violet);
+            border: 1px solid var(--neon-violet);
+            box-shadow: 0 0 10px rgba(138, 43, 232, 0.15);
+        }
+
+        .btn-secondary:hover {
+            background: var(--neon-violet);
+            color: white;
+            box-shadow: 0 0 20px rgba(138, 43, 232, 0.45);
+        }
+
+        .btn-json {
+            background: linear-gradient(90deg, var(--neon-amber), var(--neon-coral));
+            color: var(--ink);
+            border: 1px solid var(--neon-amber);
+            box-shadow: 0 0 14px rgba(230, 149, 0, 0.3);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-json:hover {
+            box-shadow: 0 0 22px rgba(230, 149, 0, 0.55);
+            transform: translateY(-2px);
+        }
+
+        .btn-json:active {
+            transform: translateY(0);
+        }
+
+        /* Colorful glass-card accent variants */
+        .glass-card {
+            border-top: 3px solid var(--card-border);
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .glass-card--cyan   { border-top-color: var(--neon-cyan);   box-shadow: 0 4px 24px rgba(0, 184, 196, 0.14); }
+        .glass-card--violet { border-top-color: var(--neon-violet); box-shadow: 0 4px 24px rgba(138, 43, 232, 0.14); }
+        .glass-card--pink   { border-top-color: var(--neon-pink);   box-shadow: 0 4px 24px rgba(230, 25, 201, 0.14); }
+        .glass-card--amber  { border-top-color: var(--neon-amber);  box-shadow: 0 4px 24px rgba(230, 149, 0, 0.14); }
+        .glass-card--green  { border-top-color: var(--neon-green);  box-shadow: 0 4px 24px rgba(0, 168, 120, 0.14); }
+        .glass-card--coral  { border-top-color: var(--neon-coral);  box-shadow: 0 4px 24px rgba(255, 92, 92, 0.14); }
+
+        .glass-card--cyan:hover   { box-shadow: 0 10px 30px rgba(0, 184, 196, 0.26); }
+        .glass-card--violet:hover { box-shadow: 0 10px 30px rgba(138, 43, 232, 0.26); }
+        .glass-card--pink:hover   { box-shadow: 0 10px 30px rgba(230, 25, 201, 0.26); }
+        .glass-card--amber:hover  { box-shadow: 0 10px 30px rgba(230, 149, 0, 0.26); }
+        .glass-card--green:hover  { box-shadow: 0 10px 30px rgba(0, 168, 120, 0.26); }
+        .glass-card--coral:hover  { box-shadow: 0 10px 30px rgba(255, 92, 92, 0.26); }
+
+        /* Feedback wall */
+        .feedback-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin: 20px 0 36px 0;
+        }
+
+        .feedback-card {
+            background: rgba(20, 18, 31, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .feedback-card .stars {
+            color: var(--amber-text);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .feedback-card p {
+            margin: 0 0 10px 0;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .feedback-card .author {
+            color: var(--coral-text);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .feedback-empty {
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 10px 0 30px 0;
+        }
+
+        .feedback-divider {
+            border: none;
+            border-top: 1px solid var(--card-border);
+            margin: 10px 0 26px 0;
+        }
+
+        .feedback-form {
+            display: grid;
+            gap: 16px;
+            max-width: 560px;
+        }
+
+        .feedback-form label {
+            display: block;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .feedback-form input[type="text"],
+        .feedback-form textarea {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(20, 18, 31, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .feedback-form input[type="text"]:focus,
+        .feedback-form textarea:focus {
+            outline: none;
+            border-color: var(--coral-text);
+            box-shadow: 0 0 10px rgba(230, 0, 0, 0.25);
+        }
+
+        .feedback-form textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .star-picker {
+            display: inline-flex;
+            gap: 6px;
+            font-size: 1.6rem;
+        }
+
+        .star-picker button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: rgba(20, 18, 31, 0.18);
+            padding: 0;
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+
+        .star-picker button.active,
+        .star-picker button:hover,
+        .star-picker button:hover ~ button {
+            color: var(--amber-text);
+        }
+
+        .feedback-note {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .feedback-status {
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .feedback-status.ok { color: var(--green-text); }
+        .feedback-status.err { color: var(--coral-text); }
+
+        /* Honeypot: visually hidden but present in the DOM/tab order-free for bots */
+        .hp-field {
+            position: absolute;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+
+        .feedback-card {
+            position: relative;
+        }
+
+        .report-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            opacity: 0.35;
+            transition: opacity 0.15s ease;
+        }
+
+        .report-btn:hover { opacity: 0.9; }
+        .report-btn:disabled { opacity: 0.2; cursor: default; }
+
+        /* Category dot indicators for the node table */
+        .node-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+            box-shadow: 0 0 8px currentColor;
+        }
+        .dot-trigger { background: var(--neon-cyan);   color: var(--neon-cyan); }
+        .dot-fetch   { background: var(--neon-amber);  color: var(--neon-amber); }
+        .dot-combine { background: var(--neon-violet); color: var(--neon-violet); }
+        .dot-ai      { background: var(--neon-pink);   color: var(--neon-pink); }
+        .dot-output  { background: var(--neon-green);  color: var(--neon-green); }
+
+        /* Screenshot gallery */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        .gallery-item figure {
+            margin: 0;
+        }
+
+        .gallery-frame {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            background: rgba(20, 18, 31, 0.04);
+            aspect-ratio: 16 / 10;
+            cursor: zoom-in;
+        }
+
+        .gallery-item:nth-child(1) .gallery-frame { box-shadow: 0 0 0 1px rgba(0, 184, 196, 0.3) inset; }
+        .gallery-item:nth-child(2) .gallery-frame { box-shadow: 0 0 0 1px rgba(0, 168, 120, 0.3) inset; }
+
+        .gallery-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            display: block;
+            transition: transform 0.25s ease;
+        }
+
+        .gallery-frame:hover img {
+            transform: scale(1.02);
+        }
+
+        .gallery-frame .zoom-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(20, 18, 31, 0.65);
+            color: white;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .gallery-frame:hover .zoom-hint {
+            opacity: 1;
+        }
+
+        .gallery-placeholder {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            gap: 8px;
+            cursor: default;
+        }
+
+        .gallery-placeholder .icon {
+            font-size: 2rem;
+        }
+
+        .gallery-item figcaption {
+            margin-top: 12px;
+            text-align: center;
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            .gallery-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Lightbox */
+        .lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 9, 15, 0.88);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 40px 20px;
+            cursor: zoom-out;
+        }
+
+        .lightbox-overlay.open {
+            display: flex;
+        }
+
+        .lightbox-overlay img {
+            max-width: min(1100px, 100%);
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 10px;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 24px;
+            right: 28px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Video Section */
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+
+        .video-container video,
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            outline: none;
+            border: 0;
+        }
+
+        .video-thumbnail-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            filter: blur(24px) brightness(0.65);
+            transform: scale(1.15);
+        }
+
+        .video-thumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* contain (not cover) guarantees the image's real proportions are
+               always preserved -- it will never be cropped or stretched,
+               regardless of the source image's aspect ratio. */
+            object-fit: fill;
+            object-position: center;
+            display: block;
+        }
+
+        .video-container[id="videoFacade"] {
+            cursor: pointer;
+        }
+
+        .video-play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            color: var(--ink);
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 24px rgba(20, 18, 31, 0.35);
+            /* optical nudge so the ▶ glyph looks centered rather than left-heavy */
+            padding-left: 6px;
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .video-container[id="videoFacade"]:hover .video-play-btn {
+            background: #ffffff;
+            transform: translate(-50%, -50%) scale(1.08);
+            box-shadow: 0 8px 30px rgba(20, 18, 31, 0.45);
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        th {
+            color: var(--cyan-text);
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        td:first-child {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* FAQ */
+        .faq-item {
+            margin-bottom: 20px;
+        }
+
+        .faq-item h3 {
+            color: var(--neon-violet);
+            margin-bottom: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 { font-size: 2.2rem; }
+            .btn { display: block; margin: 15px auto; }
+            table, thead, tbody, th, td, tr { display: block; }
+            th { display: none; }
+            td { position: relative; padding-left: 50%; border-bottom: 1px solid var(--card-border); }
+            td:before { position: absolute; left: 15px; width: 45%; font-weight: bold; content: attr(data-label); color: var(--cyan-text); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- HERO SECTION -->
+        <header>
+            <h1>Build Your Own AI News Summarizer</h1>
+            <p>Conducted by: <strong>Vinay S Kumar</strong> and <strong>Prateeksha Acharya</strong></p>
+            <p>From 45 minutes of manual scrolling to a 2-minute AI-driven daily intelligence brief. Learn no-code automation with n8n.</p>
+            <!-- UPDATE THESE LINKS LATER -->
+            <a href="assets/n8n Workshop - AI Tech News Summarizer -Students Guide.pdf" class="btn btn-primary" download>📄 View &amp; Download Guide (PDF)</a>
+            <a href="assets/n8n Workshop - Build Your AI News Summarizer.pptx" class="btn btn-secondary" download>📊 Download Slides (PPT)</a>
+            <button type="button" class="btn btn-json" onclick="downloadWorkflowJSON()">🧬 Download Workflow (JSON)</button>
+        </header>
+
+        <!-- VIDEO SECTION -->
+        <section class="glass-card glass-card--cyan">
+            <h2>🎥 Workshop Recording</h2>
+            <p>Missed the live session or need a refresher? Watch the complete step-by-step build below.</p>
+            <div class="video-container" id="videoFacade" onclick="loadWorkshopVideo(this)" role="button" tabindex="0" aria-label="Play workshop recording video" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadWorkshopVideo(this);}">
+                <!-- Hosted on Google Drive (file exceeds GitHub's 25MB web upload limit).
+                     Loaded on click so visitors see our own thumbnail, not Drive's auto-generated frame. -->
+                <div class="video-thumbnail-bg" style="background-image: url('assets/n8n - Workshop - 2026 - Video - Thumbnail.png')"></div>
+                <img src="assets/n8n - Workshop - 2026 - Video - Thumbnail.png" alt="Workshop recording thumbnail" class="video-thumbnail">
+                <div class="video-play-btn">▶</div>
+            </div>
+        </section>
+
+        <!-- SCREENSHOT GALLERY -->
+        <section class="glass-card glass-card--pink">
+            <h2>📸 See It In Action</h2>
+            <p>A peek at the finished automation: the live n8n canvas, and the daily brief landing straight in the inbox.</p>
+            <div class="gallery-grid">
+                <div class="gallery-item">
+                    <figure>
+                        <div class="gallery-frame" onclick="openLightbox(this.querySelector('img'))">
+                            <!-- UPDATE THIS IMAGE SOURCE LATER -->
+                            <img src="assets/n8n - Workflow.png" alt="The complete n8n workflow canvas" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <span class="zoom-hint">🔍 Click to expand</span>
+                            <div class="gallery-placeholder">
+                                <span class="icon">🧩</span>
+                                <span>Workflow screenshot coming soon<br>Add it at <code>assets/n8n - Workflow.jpeg</code></span>
+                            </div>
+                        </div>
+                        <figcaption>The full n8n workflow canvas</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery-item">
+                    <figure>
+                        <div class="gallery-frame" onclick="openLightbox(this.querySelector('img'))">
+                            <!-- UPDATE THIS IMAGE SOURCE LATER -->
+                            <img src="assets/Email.jpeg" alt="Example of the AI-generated news summary email" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <span class="zoom-hint">🔍 Click to expand</span>
+                            <div class="gallery-placeholder">
+                                <span class="icon">📬</span>
+                                <span>Email screenshot coming soon<br>Add it at <code>assets/Email.jpeg</code></span>
+                            </div>
+                        </div>
+                        <figcaption>The AI-summarized news brief, delivered</figcaption>
+                    </figure>
+                </div>
+            </div>
+        </section>
+
+        <!-- LIGHTBOX (shared by all gallery images) -->
+        <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox(event)">
+            <button type="button" class="lightbox-close" onclick="closeLightbox(event)" aria-label="Close">✕</button>
+            <img id="lightboxImage" src="" alt="">
+        </div>
+
+        <!-- NO-CODE PRIMER -->
+        <section class="glass-card glass-card--violet">
+            <h2>⚡ What is No-Code Automation?</h2>
+            <p>Traditionally, if you wanted computers to talk to each other, you needed to spend years learning complex coding languages. No-code platforms like <strong>n8n</strong> change this entirely.</p>
+            <p>They provide a visual canvas where you drag, drop, and connect "nodes" that represent logic. It is like building with LEGO bricks for software—you focus on the logic of the workflow, and the platform handles the underlying technical communication.</p>
+        </section>
+
+        <!-- NODE GLOSSARY -->
+        <section class="glass-card glass-card--amber">
+            <h2>🧩 The Node Cheat Sheet</h2>
+            <p>Keep this reference guide handy while building your workflow.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Node Name</th>
+                        <th>The Analogy</th>
+                        <th>What It Actually Does</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-label="Node Name"><span class="node-dot dot-trigger"></span>Schedule Trigger</td>
+                        <td data-label="The Analogy">The Alarm Clock ⏰</td>
+                        <td data-label="What It Actually Does">Starts your automation automatically at a specific time every day.</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Node Name"><span class="node-dot dot-fetch"></span>RSS Read</td>
+                        <td data-label="The Analogy">The Newsboy 📰</td>
+                        <td data-label="What It Actually Does">Fetches the latest published articles from a specific website.</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Node Name"><span class="node-dot dot-fetch"></span>HTTP Request</td>
+                        <td data-label="The Analogy">The Digital Waiter 🤵</td>
+                        <td data-label="What It Actually Does">Communicates with external APIs (like SerpAPI) to fetch live, real-time data from the entire internet.</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Node Name"><span class="node-dot dot-combine"></span>Merge</td>
+                        <td data-label="The Analogy">The Organizer 📁</td>
+                        <td data-label="What It Actually Does">Combines separate data streams (like RSS and APIs) into one workflow path.</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Node Name"><span class="node-dot dot-combine"></span>Aggregate</td>
+                        <td data-label="The Analogy">The Stapler 🖇️</td>
+                        <td data-label="What It Actually Does">Bundles separate items into one single JSON document so the AI can read it all at once.</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Node Name"><span class="node-dot dot-ai"></span>Gemini AI</td>
+                        <td data-label="The Analogy">The Brain 🧠</td>
+                        <td data-label="What It Actually Does">Reads your aggregated data, applies your prompt, and writes the clean summary.</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Node Name"><span class="node-dot dot-output"></span>Gmail Send</td>
+                        <td data-label="The Analogy">The Delivery Person 📬</td>
+                        <td data-label="What It Actually Does">Takes the AI's final text and emails it directly to your inbox.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- FAQ SECTION -->
+        <section class="glass-card glass-card--green">
+            <h2>❓ Frequently Asked Questions</h2>
+            
+            <div class="faq-item">
+                <h3>Where do I find my SerpAPI key?</h3>
+                <p>Log in to your SerpAPI account, navigate to the Dashboard, and click on "API Key" in the left-hand menu. Copy that string and paste it into the <code>api_key</code> parameter in your HTTP node.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Why isn't my Gmail connecting?</h3>
+                <p>Ensure you have clicked "Create New Credential" in the Gmail Send node and used the direct "Sign in with Google" button. You may need to click "Advanced" and "Go to [unsafe]" to bypass Google's developer warning during setup.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I change the Gemini prompt?</h3>
+                <p>Absolutely! The prompt is entirely customizable. You can ask Gemini to summarize the news into bullet points, translate it into another language, or even write it in the style of a pirate. Just edit the text inside the Basic LLM Chain Node.</p>
+            </div>
+        </section>
+
+        <!-- FEEDBACK WALL -->
+        <section class="glass-card glass-card--coral">
+            <h2>💬 What Builders Are Saying</h2>
+            <p>Real feedback from people who've built this workflow — published automatically the moment it's submitted. See something off? Use the 🚩 on a card to report it.</p>
+
+            <div id="feedbackGrid" class="feedback-grid"></div>
+            <p id="feedbackEmpty" class="feedback-empty">Loading feedback…</p>
+
+            <hr class="feedback-divider">
+
+            <h3 style="color: var(--coral-text); font-family: 'Space Grotesk', sans-serif; margin-bottom: 4px;">Leave Your Feedback</h3>
+            <p class="feedback-note">Your feedback publishes right away — no waiting on us. Please keep it constructive!</p>
+
+            <form class="feedback-form" id="feedbackForm">
+                <!-- Honeypot: real visitors never see or fill this. Bots often do. -->
+                <div class="hp-field" aria-hidden="true">
+                    <label for="fbWebsite">Website</label>
+                    <input type="text" id="fbWebsite" name="fbWebsite" tabindex="-1" autocomplete="off">
+                </div>
+                <div>
+                    <label for="fbName">Your Name</label>
+                    <input type="text" id="fbName" name="fbName" placeholder="Jane Doe" required maxlength="60">
+                </div>
+                <div>
+                    <label>Your Rating</label>
+                    <div class="star-picker" id="starPicker" data-rating="0">
+                        <button type="button" data-value="1">★</button>
+                        <button type="button" data-value="2">★</button>
+                        <button type="button" data-value="3">★</button>
+                        <button type="button" data-value="4">★</button>
+                        <button type="button" data-value="5">★</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="fbMessage">Your Feedback</label>
+                    <textarea id="fbMessage" name="fbMessage" placeholder="What did you think of the workshop? (at least 15 characters)" required minlength="15" maxlength="500"></textarea>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-json" style="width: auto;" id="feedbackSubmitBtn">✉️ Publish Feedback</button>
+                    <span id="feedbackStatus" class="feedback-status"></span>
+                </div>
+            </form>
+        </section>
+
+    </div>
+
+    <script>
+        // The n8n workflow shown in the Node Cheat Sheet above, ready to import.
+        // In n8n: Workflows -> Import from File -> select this JSON.
+        const AI_NEWS_SUMMARIZER_WORKFLOW = {
+            "name": "AI News Summarizer",
+            "nodes": [
+                {
+                    "parameters": { "rule": { "interval": [ { "field": "hours", "hoursInterval": 24 } ] } },
+                    "id": "schedule-trigger",
+                    "name": "Schedule Trigger",
+                    "type": "n8n-nodes-base.scheduleTrigger",
+                    "typeVersion": 1.2,
+                    "position": [ -260, 0 ]
+                },
+                {
+                    "parameters": { "url": "https://news.google.com/rss" },
+                    "id": "rss-read",
+                    "name": "RSS Read",
+                    "type": "n8n-nodes-base.rssFeedRead",
+                    "typeVersion": 1,
+                    "position": [ 0, -100 ]
+                },
+                {
+                    "parameters": {
+                        "url": "https://serpapi.com/search",
+                        "sendQuery": true,
+                        "queryParameters": {
+                            "parameters": [
+                                { "name": "engine", "value": "google_news" },
+                                { "name": "api_key", "value": "YOUR_SERPAPI_KEY_HERE" }
+                            ]
+                        }
+                    },
+                    "id": "http-request",
+                    "name": "HTTP Request",
+                    "type": "n8n-nodes-base.httpRequest",
+                    "typeVersion": 4.2,
+                    "position": [ 0, 100 ]
+                },
+                {
+                    "parameters": { "mode": "combine", "combinationMode": "multiplex" },
+                    "id": "merge",
+                    "name": "Merge",
+                    "type": "n8n-nodes-base.merge",
+                    "typeVersion": 3,
+                    "position": [ 260, 0 ]
+                },
+                {
+                    "parameters": { "aggregate": "aggregateAllItemData" },
+                    "id": "aggregate",
+                    "name": "Aggregate",
+                    "type": "n8n-nodes-base.aggregate",
+                    "typeVersion": 1,
+                    "position": [ 500, 0 ]
+                },
+                {
+                    "parameters": {
+                        "text": "You are a news editor. Summarize the following stories into a short, friendly daily briefing with bullet points and 1-line takeaways:\n\n{{ $json.data }}",
+                        "options": {}
+                    },
+                    "id": "gemini-ai",
+                    "name": "Gemini AI",
+                    "type": "@n8n/n8n-nodes-langchain.chainLlm",
+                    "typeVersion": 1.5,
+                    "position": [ 740, 0 ]
+                },
+                {
+                    "parameters": {
+                        "sendTo": "you@example.com",
+                        "subject": "🗞️ Your AI Daily News Brief",
+                        "message": "={{ $json.text }}",
+                        "options": {}
+                    },
+                    "id": "gmail-send",
+                    "name": "Gmail Send",
+                    "type": "n8n-nodes-base.gmail",
+                    "typeVersion": 2.1,
+                    "position": [ 980, 0 ]
+                }
+            ],
+            "connections": {
+                "Schedule Trigger": {
+                    "main": [ [ { "node": "RSS Read", "type": "main", "index": 0 }, { "node": "HTTP Request", "type": "main", "index": 0 } ] ]
+                },
+                "RSS Read": { "main": [ [ { "node": "Merge", "type": "main", "index": 0 } ] ] },
+                "HTTP Request": { "main": [ [ { "node": "Merge", "type": "main", "index": 1 } ] ] },
+                "Merge": { "main": [ [ { "node": "Aggregate", "type": "main", "index": 0 } ] ] },
+                "Aggregate": { "main": [ [ { "node": "Gemini AI", "type": "main", "index": 0 } ] ] },
+                "Gemini AI": { "main": [ [ { "node": "Gmail Send", "type": "main", "index": 0 } ] ] }
+            },
+            "pinData": {},
+            "meta": { "instanceId": "ai-news-summarizer-masterclass" }
+        };
+
+        function downloadWorkflowJSON() {
+            const blob = new Blob([JSON.stringify(AI_NEWS_SUMMARIZER_WORKFLOW, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "n8n - AI Tech News Summarizer.json";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // ---------- LIGHTBOX ----------
+        function openLightbox(imgEl) {
+            // Guard: don't open if the image failed to load (placeholder is showing instead)
+            if (!imgEl || imgEl.style.display === "none" || !imgEl.src) return;
+
+            const overlay = document.getElementById("lightboxOverlay");
+            const lightboxImg = document.getElementById("lightboxImage");
+            lightboxImg.src = imgEl.src;
+            lightboxImg.alt = imgEl.alt || "";
+            overlay.classList.add("open");
+            document.body.style.overflow = "hidden"; // prevent background scroll
+        }
+
+        function closeLightbox(event) {
+            // Only close if clicking the overlay/backdrop or the close button, not the image itself
+            if (event && event.target.id === "lightboxImage") return;
+            document.getElementById("lightboxOverlay").classList.remove("open");
+            document.body.style.overflow = "";
+        }
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") closeLightbox();
+        });
+
+        // ---------- FEEDBACK WALL ----------
+        // Backed by a free Google Sheet + Apps Script. See GOOGLE_SHEETS_SETUP.md
+        // for the 5-minute setup. Paste your deployed Web App URL below.
+        const FEEDBACK_API_URL = "https://script.google.com/macros/s/AKfycbyJkZ0AvgeGIGoPvrdcuJjd6-J_z0GK_PUvs4LE379RN6xdOthGGsPqdw-ZtKEbpIlQ/exec";
+
+        const FEEDBACK_RATE_LIMIT_HOURS = 12;
+        const FEEDBACK_BLOCKLIST = ["http://", "https://", "www.", "viagra", "casino", "crypto giveaway"];
+
+        function loadWorkshopVideo(container) {
+            container.onclick = null;
+            container.onkeydown = null;
+            container.removeAttribute("role");
+            container.removeAttribute("tabindex");
+            container.style.cursor = "default";
+            container.innerHTML = `
+                <iframe
+                    src="https://drive.google.com/file/d/1dAiYR1-c-FggQ2Z4IphDAWJhCT27COJn/preview"
+                    allow="autoplay"
+                    allowfullscreen
+                    title="Workshop Recording"></iframe>
+            `;
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[c]));
+        }
+
+        async function fetchAndRenderFeedback() {
+            const grid = document.getElementById("feedbackGrid");
+            const empty = document.getElementById("feedbackEmpty");
+            if (!grid) return;
+
+            if (!FEEDBACK_API_URL || FEEDBACK_API_URL.includes("PASTE_YOUR")) {
+                grid.style.display = "none";
+                if (empty) {
+                    empty.style.display = "block";
+                    empty.textContent = "Feedback wall isn't connected yet — see GOOGLE_SHEETS_SETUP.md to finish setup.";
+                }
+                return;
+            }
+
+            try {
+                const res = await fetch(FEEDBACK_API_URL, { method: "GET" });
+                const raw = await res.text();
+                const data = JSON.parse(raw);
+                const items = data.feedback || [];
+
+                if (!items.length) {
+                    grid.style.display = "none";
+                    if (empty) {
+                        empty.style.display = "block";
+                        empty.textContent = "No feedback yet — be the first to leave some below!";
+                    }
+                    return;
+                }
+
+                if (empty) empty.style.display = "none";
+                grid.style.display = "grid";
+                grid.innerHTML = items.map(item => {
+                    const rating = Number(item.rating) || 0;
+                    const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+                    return `
+                        <div class="feedback-card">
+                            <button type="button" class="report-btn" data-id="${escapeHtml(item.id)}" title="Report this feedback">🚩</button>
+                            <div class="stars">${stars}</div>
+                            <p>"${escapeHtml(item.message)}"</p>
+                            <div class="author">— ${escapeHtml(item.name)}</div>
+                        </div>
+                    `;
+                }).join("");
+
+                grid.querySelectorAll(".report-btn").forEach(btn => {
+                    btn.addEventListener("click", () => reportFeedback(btn));
+                });
+            } catch (err) {
+                grid.style.display = "none";
+                if (empty) {
+                    empty.style.display = "block";
+                    empty.textContent = "Couldn't load feedback right now — please refresh in a moment.";
+                }
+            }
+        }
+
+        async function reportFeedback(btn) {
+            btn.disabled = true;
+            btn.textContent = "…";
+            try {
+                await fetch(FEEDBACK_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: "report", id: btn.dataset.id })
+                });
+                btn.textContent = "✓";
+                btn.title = "Reported — thank you";
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = "🚩";
+            }
+        }
+
+        function setupStarPicker() {
+            const picker = document.getElementById("starPicker");
+            if (!picker) return;
+            const buttons = Array.from(picker.querySelectorAll("button"));
+
+            function paint(rating) {
+                buttons.forEach(btn => {
+                    btn.textContent = Number(btn.dataset.value) <= rating ? "★" : "☆";
+                    btn.classList.toggle("active", Number(btn.dataset.value) <= rating);
+                });
+            }
+            picker._paint = paint; // exposed so the form handler can reset without re-binding listeners
+
+            buttons.forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const value = Number(btn.dataset.value);
+                    picker.dataset.rating = String(value);
+                    paint(value);
+                });
+            });
+        }
+
+        function showFeedbackStatus(message, kind) {
+            const status = document.getElementById("feedbackStatus");
+            if (!status) return;
+            status.textContent = message;
+            status.className = "feedback-status " + kind;
+            status.style.display = "inline";
+        }
+
+        function setupFeedbackForm() {
+            const form = document.getElementById("feedbackForm");
+            if (!form) return;
+
+            form.addEventListener("submit", async function (event) {
+                event.preventDefault();
+
+                const submitBtn = document.getElementById("feedbackSubmitBtn");
+                const name = document.getElementById("fbName").value.trim();
+                const message = document.getElementById("fbMessage").value.trim();
+                const rating = Number(document.getElementById("starPicker").dataset.rating || 0);
+                const website = document.getElementById("fbWebsite").value; // honeypot
+
+                if (!FEEDBACK_API_URL || FEEDBACK_API_URL.includes("PASTE_YOUR")) {
+                    showFeedbackStatus("Feedback wall isn't connected yet — see GOOGLE_SHEETS_SETUP.md.", "err");
+                    return;
+                }
+
+                if (!name || message.length < 15) {
+                    showFeedbackStatus("Please add your name and at least 15 characters of feedback.", "err");
+                    return;
+                }
+
+                const lowerMessage = message.toLowerCase();
+                if (FEEDBACK_BLOCKLIST.some(word => lowerMessage.includes(word))) {
+                    showFeedbackStatus("That message looks like spam and wasn't published.", "err");
+                    return;
+                }
+
+                let lastSubmitted = 0;
+                try {
+                    lastSubmitted = Number(localStorage.getItem("fbLastSubmitted") || 0);
+                } catch (storageErr) {
+                    lastSubmitted = 0; // storage blocked (e.g. strict privacy mode) — skip rate limit check
+                }
+                const hoursSince = (Date.now() - lastSubmitted) / (1000 * 60 * 60);
+                if (lastSubmitted && hoursSince < FEEDBACK_RATE_LIMIT_HOURS) {
+                    const hoursLeft = Math.ceil(FEEDBACK_RATE_LIMIT_HOURS - hoursSince);
+                    showFeedbackStatus(`You can post again in about ${hoursLeft}h. Thanks for your patience!`, "err");
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Publishing…";
+
+                try {
+                    const res = await fetch(FEEDBACK_API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({ name, message, rating, website })
+                    });
+                    const raw = await res.text();
+                    const data = JSON.parse(raw);
+
+                    if (data.ok) {
+                        try { localStorage.setItem("fbLastSubmitted", String(Date.now())); } catch (storageErr) { /* ignore if storage blocked */ }
+                        showFeedbackStatus("✅ Published — thank you for your feedback!", "ok");
+                        form.reset();
+                        const picker = document.getElementById("starPicker");
+                        picker.dataset.rating = "0";
+                        if (typeof picker._paint === "function") picker._paint(0);
+                        fetchAndRenderFeedback();
+                    } else {
+                        showFeedbackStatus(data.error || "Couldn't publish that — please try again.", "err");
+                    }
+                } catch (err) {
+                    showFeedbackStatus("Something went wrong — please try again shortly.", "err");
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "✉️ Publish Feedback";
+                }
+            });
+        }
+
+        fetchAndRenderFeedback();
+        setupStarPicker();
+        setupFeedbackForm();
+    </script>
+</body>
+</html>

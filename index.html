@@ -646,13 +646,16 @@
         <section class="glass-card glass-card--cyan">
             <h2>🎥 Workshop Recording</h2>
             <p>Missed the live session or need a refresher? Watch the complete step-by-step build below.</p>
-            <div class="video-container">
-                <iframe 
-                    src="https://www.youtube.com/embed/-hrbgT702W0?playsinline=1&rel=0" 
-                    title="Workshop Recording" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen>
-                </iframe>
+            <div class="video-container" id="videoFacade" onclick="loadWorkshopVideo(this)" role="button" tabindex="0"
+                aria-label="Play workshop recording video"
+                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadWorkshopVideo(this);}">
+                <!-- Hosted on Google Drive (file exceeds GitHub's 25MB web upload limit).
+                     Loaded on click so visitors see our own thumbnail, not Drive's auto-generated frame. -->
+                <div class="video-thumbnail-bg"
+                    style="background-image: url('assets/n8n - Workshop - 2026 - Video - Thumbnail.png')"></div>
+                <img src="assets/n8n - Workshop - 2026 - Video - Thumbnail.png" alt="Workshop recording thumbnail"
+                    class="video-thumbnail">
+                <div class="video-play-btn">▶</div>
             </div>
         </section>
 

@@ -965,6 +965,16 @@
         const FEEDBACK_BLOCKLIST = ["http://", "https://", "www.", "viagra", "casino", "crypto giveaway"];
 
         function loadWorkshopVideo(container) {
+            const driveUrl = "https://drive.google.com/file/d/1dAiYR1-c-FggQ2Z4IphDAWJhCT27COJn/view";
+
+            // Check if the screen size matches your mobile breakpoint (768px or less)
+            if (window.innerWidth <= 768) {
+                // Navigate mobile users directly to the video in a new tab
+                window.open(driveUrl, "_blank");
+                return; // Stop the script here so the iframe doesn't load
+            }
+
+            // Desktop version remains perfect and untouched
             container.onclick = null;
             container.onkeydown = null;
             container.removeAttribute("role");
